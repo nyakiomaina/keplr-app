@@ -11,7 +11,7 @@ const App: React.FC = () => {
   useEffect(() => {
     async function setupKeplr() {
       if (window.keplr) {
-        const chainId = "celestia-1";
+        const chainId =  "celestia";
         try {
           await window.keplr.experimentalSuggestChain({
             chainId: chainId,
@@ -50,9 +50,19 @@ const App: React.FC = () => {
           const key = await window.keplr.getKey(chainId);
           console.log("Keplr Key:", key);
 
-          const signer = window.keplr.getOfflineSigner(chainId);
-          const accounts = await signer.getAccounts();
-          console.log("Accounts:", accounts);
+          const offlineSigner = window.keplr.getOfflineSigner(chainId);
+          const accounts = await offlineSigner.getAccounts();
+          const signerAddress = accounts[0].address;
+
+          const bodyBytes = Uint8Array.from(atob("Cp0BCiAvY2VsZXN0aWEuYmxvYi52MS5Nc2dQYXlGb3JCbG9icxJ5Ci9jZWxlc3RpYTE1YXNsMHllc2VuZm5lNzlyMzhhMGRmNHZzMmZqdnM5NGM3dGV5dxIdAAAAAAAAAAAAAAAAAAAAAAAAAAAADBuw7+PjGs8aAsgBIiCvP7B5dz6qbJDevAA5/7yTQCmh0lEUM/D3DwQzd+neG0IBAA=="), c => c.charCodeAt(0));
+
+          let result = await window.keplr.signDirect(chainId, signerAddress, {
+            bodyBytes: bodyBytes,
+            authInfoBytes: new Uint8Array(),
+            chainId: chainId,
+          });
+
+          console.log("Sign result:", result);
         } catch (error) {
           console.error("Error setting up Keplr:", error);
         }
@@ -71,6 +81,6 @@ const App: React.FC = () => {
       </header>
     </div>
   );
-}
+};
 
 export default App;
