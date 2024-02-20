@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
+import init, { pay_blobs, message_to_tx, auth_info_encode } from './wasm_pay_for_blobs';
+import { StargateClient } from '@cosmjs/stargate';
 
 declare global {
   interface Window {
@@ -8,76 +10,95 @@ declare global {
 }
 
 const App: React.FC = () => {
+  const [initialized, setInitialized] = useState(false);
+
   useEffect(() => {
-    async function setupKeplr() {
-      if (window.keplr) {
-        const chainId =  "celestia";
-        try {
-          await window.keplr.experimentalSuggestChain({
-            chainId: chainId,
-            chainName: "Celestia",
-            rpc: "https://rpc.celestia.org", 
-            rest: "https://api.celestia.org",
-            bip44: { coinType: 118 },
-            bech32Config: {
-              bech32PrefixAccAddr: "celestia",
-              bech32PrefixAccPub: "celestiapub",
-              bech32PrefixValAddr: "celestiavaloper",
-              bech32PrefixValPub: "celestiavaloperpub",
-              bech32PrefixConsAddr: "celestiavalcons",
-              bech32PrefixConsPub: "celestiavalconspub"
-            },
-            currencies: [{
-              coinDenom: "CELESTIA",
-              coinMinimalDenom: "uclestia",
-              coinDecimals: 6,
-            }],
-            feeCurrencies: [{
-              coinDenom: "CELESTIA",
-              coinMinimalDenom: "uclestia",
-              coinDecimals: 6,
-            }],
-            stakeCurrency: {
-              coinDenom: "CELESTIA",
-              coinMinimalDenom: "uclestia",
-              coinDecimals: 6,
-            },
-            gasPriceStep: { low: 0.01, average: 0.025, high: 0.04 }
-          });
-
-          await window.keplr.enable(chainId);
-
-          const key = await window.keplr.getKey(chainId);
-          console.log("Keplr Key:", key);
-
-          const offlineSigner = window.keplr.getOfflineSigner(chainId);
-          const accounts = await offlineSigner.getAccounts();
-          const signerAddress = accounts[0].address;
-
-          const bodyBytes = Uint8Array.from(atob("Cp0BCiAvY2VsZXN0aWEuYmxvYi52MS5Nc2dQYXlGb3JCbG9icxJ5Ci9jZWxlc3RpYTE1YXNsMHllc2VuZm5lNzlyMzhhMGRmNHZzMmZqdnM5NGM3dGV5dxIdAAAAAAAAAAAAAAAAAAAAAAAAAAAADBuw7+PjGs8aAsgBIiCvP7B5dz6qbJDevAA5/7yTQCmh0lEUM/D3DwQzd+neG0IBAA=="), c => c.charCodeAt(0));
-
-          let result = await window.keplr.signDirect(chainId, signerAddress, {
-            bodyBytes: bodyBytes,
-            authInfoBytes: new Uint8Array(),
-            chainId: chainId,
-          });
-
-          console.log("Sign result:", result);
-        } catch (error) {
-          console.error("Error setting up Keplr:", error);
-        }
-      } else {
-        console.log("Keplr extension not found.");
+    async function initializeWasm() {
+      try {
+        await init();
+        setInitialized(true);
+      } catch (error) {
+        console.error('Error initializing WASM Module:', error);
       }
     }
 
-    setupKeplr();
+    initializeWasm();
   }, []);
+
+  useEffect(() => {
+    async function blockchainOperations() {
+      if (!window.keplr || !initialized) {
+        console.log('Keplr not found or WASM not initialized');
+        return;
+      }
+
+      const chainId = "celestia";
+      await window.keplr.enable(chainId);
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const accounts = await offlineSigner.getAccounts();
+      const signerAddress = accounts[0].address;
+
+      const rpcEndpoint = "https://rpc.celestia.org";
+      const client = await StargateClient.connect(rpcEndpoint);
+      const accountOnChain = await client.getAccount(signerAddress);
+
+      if (accountOnChain) {
+        console.log('Account Number:', accountOnChain.accountNumber);
+        console.log('Sequence:', accountOnChain.sequence);
+      } else {
+        console.log('Account not found on chain');
+        return false;
+      }
+
+      // Hypothetical namespace and data for demonstration
+      const namespace = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); // Example namespace
+      const data = new Uint8Array([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]); // Example data
+      const shareVersion = 1; // Example share version
+
+      const blobResult = pay_blobs(signerAddress, namespace, data, shareVersion);
+      console.log('Blob Result:', new Uint8Array(blobResult));
+
+      // Construct the transaction body using the blob result
+      const txBodyBytes = message_to_tx(blobResult);
+
+      // Construct the auth info using the sequence and other parameters
+      const pubKey = "your_public_key_base64"; // Replace with actual public key in base64 format
+      const sequence = BigInt(accountOnChain.sequence);
+      const coinDenom = "ucelestia";
+      const coinAmount = "1000000"; // 1 CELESTIA, assuming 6 decimal places
+      const feeGas = BigInt(200000);
+      const feePayer = signerAddress;
+      const feeGranter = signerAddress;
+
+      const authInfoBytes = auth_info_encode(
+        pubKey,
+        sequence,
+        coinDenom,
+        coinAmount,
+        feeGas,
+        feePayer,
+        feeGranter
+      );
+
+      // This is where you would sign the transaction using Keplr
+      const signResponse = await offlineSigner.signDirect(chainId, signerAddress, {
+        bodyBytes: txBodyBytes,
+        authInfoBytes: authInfoBytes,
+        chainId: chainId,
+      });
+
+      // Broadcast the transaction
+      const broadcastResponse = await client.broadcastTx(signResponse.signed);
+      console.log('Broadcast Response:', broadcastResponse);
+    }
+
+    blockchainOperations();
+  }, [initialized]);
 
   return (
     <div className="App">
       <header className="App-header">
-        <p>Hello 🙂.</p>
+        <p>Celestia and Keplr integration example.</p>
       </header>
     </div>
   );

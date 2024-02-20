@@ -1,0 +1,21 @@
+{
+  "name": "wasm_pay_for_blobs",
+  "version": "0.1.0",
+  "files": [
+    "wasm_pay_for_blobs_bg.wasm",
+    "wasm_pay_for_blobs.js",
+    "wasm_pay_for_blobs.d.ts"
+  ],
+  "module": "wasm_pay_for_blobs.js",
+  "types": "wasm_pay_for_blobs.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test"
+  }
+  
+}
