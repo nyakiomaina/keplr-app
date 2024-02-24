@@ -20,7 +20,7 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": [
-    "src"
-  ]
+//   "include": [
+//     "src"
+// , "pkg/wasm_pay_for_blobs.js", "pkg/wasm_pay_for_blobs.d.ts", "pkg/wasm_pay_for_blobs_bg.wasm.d.ts"  ]
 }
