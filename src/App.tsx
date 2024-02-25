@@ -27,6 +27,11 @@ const App: React.FC = () => {
         const accounts = await offlineSigner.getAccounts();
         const signerAddress = accounts[0].address;
 
+        const publicKey = accounts[0].pubkey;
+
+        const publicKeyBase64 = Buffer.from(publicKey).toString('base64');
+        console.log("Public Key:", publicKeyBase64);
+
         await prepareAndSendTransaction(signerAddress, chainId);
       } catch (error) {
         console.error("Initialization error:", error);
@@ -38,23 +43,26 @@ const App: React.FC = () => {
 
   async function prepareAndSendTransaction(signerAddress: string, chainId: string) {
     try {
-      const namespace = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-      const data = new TextEncoder().encode("Hello, Celestia!");
-      const shareVersion = 1;
-  
-      console.log('Calling pay_blobs with:', { signerAddress, namespace, data, shareVersion });
-      const blobResult = pay_blobs(signerAddress, namespace, data, shareVersion);
-      console.log('Result from pay_blobs:', blobResult);
-  
-      const txBodyBytes = message_to_tx(blobResult);
-      console.log('Result from message_to_tx:', txBodyBytes);
-  
-      const client = await StargateClient.connect("https://rpc.celestia.org");
+
+      const client = await StargateClient.connect("https://public-celestia-rpc.numia.xyz");
       const account = await client.getAccount(signerAddress);
       if (!account) {
         console.error("Account not found");
         return;
       }
+
+      console.log('Account info:', account);
+      const namespace = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+      const data = new TextEncoder().encode("Hello, Celestia!");
+      const shareVersion = 1;
+  
+      console.log('Calling pay_blobs with:', { signerAddress, namespace, data, shareVersion });
+
+      const blobResult = pay_blobs(signerAddress, namespace, data, shareVersion);
+      console.log('Result from pay_blobs:', blobResult);
+  
+      const txBodyBytes = message_to_tx(blobResult);
+      console.log('Result from message_to_tx:', txBodyBytes);
   
       const dummyPublicKey = "A1b2C3d4E5f6g7H8I9j0K1l2M3n4O5p6Q7r8S9t0U1v2W3x4Y5z6a7B8C9d0E1f2==";
       const authInfoBytes = auth_info_encode(
@@ -72,7 +80,6 @@ const App: React.FC = () => {
     }
   }
   
-
   return (
     <div className="App">
       <header className="App-header">
