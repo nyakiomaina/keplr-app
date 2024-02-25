@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import './App.css';
+import { StargateClient} from '@cosmjs/stargate';
 import init, { pay_blobs, message_to_tx, auth_info_encode } from './pkg';
 
 declare global {
@@ -9,71 +10,71 @@ declare global {
 }
 
 const App: React.FC = () => {
-  const [initialized, setInitialized] = useState(false);
-
   useEffect(() => {
-    async function setupKeplr() {
-      if (window.keplr) {
-        const chainId = "celestia-1"; 
-        try {
-          await window.keplr.experimentalSuggestChain({
-          });
+    async function main() {
+      try {
+        await init();
 
-          await window.keplr.enable(chainId);
-          const offlineSigner = window.keplr.getOfflineSigner(chainId);
-          const accounts = await offlineSigner.getAccounts();
-          const signerAddress = accounts[0].address;
-          setInitialized(true);
-
-          const namespace = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-          const data = new TextEncoder().encode("Sample data to send to Celestia");
-          const shareVersion = 1;
-
-          const blobResult = pay_blobs(signerAddress, namespace, data, shareVersion);
-          console.log('Blob Result:', new Uint8Array(blobResult));
-
-          const txBodyBytes = message_to_tx(blobResult);
-          const pubKey = "your_public_key_base64";
-          const sequence = BigInt(0);
-          const coinDenom = "ucelestia"
-          const coinAmount = "10000";
-          const feeGas = BigInt(200000);
-          const feePayer = signerAddress;
-          const feeGranter = "";
-
-          const authInfoBytes = auth_info_encode(
-            pubKey,
-            sequence,
-            coinDenom,
-            coinAmount,
-            feeGas,
-            feePayer,
-            feeGranter
-          );
-
-          console.log("Tx to broadcast:", {
-            bodyBytes: txBodyBytes,
-            authInfoBytes: authInfoBytes,
-            chainId: chainId,
-          });
-
-        } catch (error) {
-          console.error("Error setting up Keplr:", error);
+        if (!window.keplr) {
+          console.log("Keplr wallet not available");
+          return;
         }
-      } else {
-        console.log("Keplr extension not found.");
+
+        const chainId = "celestia";
+        await window.keplr.enable(chainId);
+
+        const offlineSigner = window.keplr.getOfflineSigner(chainId);
+        const accounts = await offlineSigner.getAccounts();
+        const signerAddress = accounts[0].address;
+
+        await prepareAndSendTransaction(signerAddress, chainId);
+      } catch (error) {
+        console.error("Initialization error:", error);
       }
     }
 
-    if (!initialized) {
-      setupKeplr();
+    main();
+  }, []);
+
+  async function prepareAndSendTransaction(signerAddress: string, chainId: string) {
+    // dummy data
+    const namespace = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+    const data = new TextEncoder().encode("Hello, Celestia!");
+    const shareVersion = 1;
+
+    const blobResult = pay_blobs(signerAddress, namespace, data, shareVersion);
+    const txBodyBytes = message_to_tx(blobResult);
+
+    const client = await StargateClient.connect("https://rpc.celestia.org");
+    const account = await client.getAccount(signerAddress);
+
+    if (!account) {
+      console.error("Account not found");
+      return;
     }
-  }, [initialized]);
+
+    const dummyPublicKey = "A1b2C3d4E5f6g7H8I9j0K1l2M3n4O5p6Q7r8S9t0U1v2W3x4Y5z6a7B8C9d0E1f2==";
+
+    const authInfoBytes = auth_info_encode(
+      dummyPublicKey,
+      BigInt(account.sequence),
+      "CELESTIA",
+      "1000",
+      BigInt(200000),
+      signerAddress,
+      signerAddress
+    );
+    const txBodyHex = Buffer.from(txBodyBytes).toString('hex');
+    const authInfoHex = Buffer.from(authInfoBytes).toString('hex');
+
+    console.log('Prepared txBodyBytes:', txBodyHex);
+    console.log('Prepared authInfoBytes:', authInfoHex);
+  }
 
   return (
     <div className="App">
       <header className="App-header">
-        <p>Celestia and Keplr integration example.</p>
+        <p>Hello!</p>
       </header>
     </div>
   );
