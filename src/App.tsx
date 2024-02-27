@@ -25,6 +25,8 @@ const App: React.FC = () => {
 
         const offlineSigner = window.keplr.getOfflineSigner(chainId);
         const accounts = await offlineSigner.getAccounts();
+        console.log("ac 0:",accounts[0]);
+        
         const signerAddress = accounts[0].address;
 
         const publicKey = accounts[0].pubkey;
@@ -32,7 +34,7 @@ const App: React.FC = () => {
         const publicKeyBase64 = Buffer.from(publicKey).toString('base64');
         console.log("Public Key:", publicKeyBase64);
 
-        await prepareAndSendTransaction(signerAddress, chainId);
+        await prepareAndSendTransaction(signerAddress, chainId, publicKeyBase64);
       } catch (error) {
         console.error("Initialization error:", error);
       }
@@ -41,7 +43,7 @@ const App: React.FC = () => {
     main();
   }, []);
 
-  async function prepareAndSendTransaction(signerAddress: string, chainId: string) {
+  async function prepareAndSendTransaction(signerAddress: string, chainId: string, publicKeyBase64: string) {
     try {
 
       const client = await StargateClient.connect("https://public-celestia-rpc.numia.xyz");
@@ -64,11 +66,11 @@ const App: React.FC = () => {
       const txBodyBytes = message_to_tx(blobResult);
       console.log('Result from message_to_tx:', txBodyBytes);
   
-      const dummyPublicKey = "A1b2C3d4E5f6g7H8I9j0K1l2M3n4O5p6Q7r8S9t0U1v2W3x4Y5z6a7B8C9d0E1f2==";
+      const PublicKey = publicKeyBase64;
       const authInfoBytes = auth_info_encode(
-        dummyPublicKey,
+        PublicKey,
         BigInt(account.sequence),
-        "CELESTIA",
+        "utia",
         "1000",
         BigInt(200000),
         signerAddress,
