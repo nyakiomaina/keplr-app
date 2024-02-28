@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import './App.css';
 import { StargateClient} from '@cosmjs/stargate';
-import init, { pay_blobs, message_to_tx, auth_info_encode } from './pkg';
+import { pay_blobs, message_to_tx, auth_info_encode } from './pkg/';
+//import * as wasm from './pkg';
 
 declare global {
   interface Window {
@@ -13,7 +14,7 @@ const App: React.FC = () => {
   useEffect(() => {
     async function main() {
       try {
-        await init();
+        //await wasm.init();
 
         if (!window.keplr) {
           console.log("Keplr wallet not available");
@@ -26,7 +27,7 @@ const App: React.FC = () => {
         const offlineSigner = window.keplr.getOfflineSigner(chainId);
         const accounts = await offlineSigner.getAccounts();
         console.log("ac 0:",accounts[0]);
-        
+
         const signerAddress = accounts[0].address;
 
         const publicKey = accounts[0].pubkey;
@@ -78,7 +79,7 @@ const App: React.FC = () => {
       );
       console.log('Result from auth_info_encode:', authInfoBytes);
     } catch (error) {
-      console.error('Error during transaction preparation:', error);
+      console.error('Error during transaction preparation??:', error);
     }
   }
   
