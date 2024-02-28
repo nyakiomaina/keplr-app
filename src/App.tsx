@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import './App.css';
 import { StargateClient} from '@cosmjs/stargate';
-import { pay_blobs, message_to_tx, auth_info_encode } from './pkg/';
-//import * as wasm from './pkg';
+//import { pay_blobs, message_to_tx, auth_info_encode } from './pkg/';
+import * as wasm from './pkg'
 
 declare global {
   interface Window {
@@ -14,7 +14,7 @@ const App: React.FC = () => {
   useEffect(() => {
     async function main() {
       try {
-        //await wasm.init();
+       await wasm.init();
 
         if (!window.keplr) {
           console.log("Keplr wallet not available");
@@ -61,14 +61,14 @@ const App: React.FC = () => {
   
       console.log('Calling pay_blobs with:', { signerAddress, namespace, data, shareVersion });
 
-      const blobResult = pay_blobs(signerAddress, namespace, data, shareVersion);
+      const blobResult = wasm.pay_blobs(signerAddress, namespace, data, shareVersion);
       console.log('Result from pay_blobs:', blobResult);
   
-      const txBodyBytes = message_to_tx(blobResult);
+      const txBodyBytes = wasm.message_to_tx(blobResult);
       console.log('Result from message_to_tx:', txBodyBytes);
   
       const PublicKey = publicKeyBase64;
-      const authInfoBytes = auth_info_encode(
+      const authInfoBytes = wasm.auth_info_encode(
         PublicKey,
         BigInt(account.sequence),
         "utia",
