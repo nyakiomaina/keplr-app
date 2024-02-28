@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import './App.css';
 import { StargateClient} from '@cosmjs/stargate';
 //import { pay_blobs, message_to_tx, auth_info_encode } from './pkg/';
-import * as wasm from './pkg'
+//import * as wasm from './pkg';
 
 declare global {
   interface Window {
@@ -14,7 +14,14 @@ const App: React.FC = () => {
   useEffect(() => {
     async function main() {
       try {
-       await wasm.init();
+        const wasm = await import('./pkg').catch(console.error);
+
+        if (!wasm) {
+          console.error("Failed to load Wasm module.");
+          return;
+        }
+
+        console.log('wasm module loaded successfully');
 
         if (!window.keplr) {
           console.log("Keplr wallet not available");
@@ -35,7 +42,7 @@ const App: React.FC = () => {
         const publicKeyBase64 = Buffer.from(publicKey).toString('base64');
         console.log("Public Key:", publicKeyBase64);
 
-        await prepareAndSendTransaction(signerAddress, chainId, publicKeyBase64);
+        await prepareAndSendTransaction(wasm, signerAddress, chainId, publicKeyBase64);
       } catch (error) {
         console.error("Initialization error:", error);
       }
@@ -44,7 +51,7 @@ const App: React.FC = () => {
     main();
   }, []);
 
-  async function prepareAndSendTransaction(signerAddress: string, chainId: string, publicKeyBase64: string) {
+  async function prepareAndSendTransaction(wasm: any, signerAddress: string, chainId: string, publicKeyBase64: string) {
     try {
 
       const client = await StargateClient.connect("https://public-celestia-rpc.numia.xyz");
