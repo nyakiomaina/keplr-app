@@ -110,7 +110,7 @@ const App: React.FC = () => {
         }
       );
   
-      console.log('Signed document:', JSON.stringify(signDoc));
+      console.log('Signed document:',signDoc);
       console.log('Signature:', signature);
   
     } catch (error) {
