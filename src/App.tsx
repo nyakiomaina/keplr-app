@@ -99,18 +99,18 @@ const App: React.FC = () => {
         accountNumber: account.accountNumber,
       };
   
-      const { signature, signed } = await window.keplr.signDirect(
+      const signature = await window.keplr.signDirect(
         chainId,
         signerAddress,
         {
           bodyBytes: signDoc.bodyBytes,
           authInfoBytes: signDoc.authInfoBytes,
           chainId: signDoc.chainId,
-          accountNumber: signDoc.accountNumber,
+          accountNumber: signDoc.accountNumber.toString(),
         }
       );
   
-      console.log('Signed document:', signed);
+      console.log('Signed document:', JSON.stringify(signDoc));
       console.log('Signature:', signature);
   
     } catch (error) {
