@@ -2,6 +2,8 @@ import React, { useEffect, } from 'react';
 import './App.css';
 import { StargateClient } from '@cosmjs/stargate';
 
+var loading = false;
+
 declare global {
   interface Window {
     keplr: any;
@@ -12,6 +14,10 @@ const App: React.FC = () => {
   useEffect(() => {
     async function main() {
       try {
+        if (loading) {
+          return;
+        }
+        loading = true;
         console.log('Loading WASM modules...');
         const wasm = await import('./pkg');
        
@@ -61,25 +67,23 @@ const App: React.FC = () => {
         return;
       }
 
-      const namespace = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+      const namespace = new Uint8Array([
+        0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+      ]);
       const data = new TextEncoder().encode("Hello, Celestia!");
       const shareVersion = 1;
 
-      console.log('WASM object before calling pay_blobs:', wasmModule);
-      if (wasmModule && wasmModule.pay_blobs) {
-        console.log('pay_blobs function is defined, proceeding to call it.');
-        const blobResult = wasmModule.pay_blobs(signerAddress, namespace, data, shareVersion);
-        console.log('Result from pay_blobs:', blobResult);
-
-        const txBodyBytes = wasmModule.message_to_tx(blobResult);
-        console.log('Result from message_to_tx:', txBodyBytes);
-      } else {
-        console.error('pay_blobs function is undefined.');
+      if (!wasmModule || !wasmModule.pay_blobs) {
+        console.error('WASM module or pay_blobs function is undefined.');
+        return;
       }
   
-      const PublicKey = publicKeyBase64;
+      const blobResult = wasmModule.pay_blobs(signerAddress, namespace, data, shareVersion);
+      const txBodyBytes = wasmModule.message_to_tx(blobResult);
       const authInfoBytes = wasmModule.auth_info_encode(
-        PublicKey,
+        publicKeyBase64,
         BigInt(account.sequence),
         "utia",
         "1000",
@@ -87,7 +91,28 @@ const App: React.FC = () => {
         signerAddress,
         signerAddress
       );
-      console.log('Result from auth_info_encode:', authInfoBytes);
+  
+      const signDoc = {
+        bodyBytes: txBodyBytes,
+        authInfoBytes: authInfoBytes,
+        chainId: chainId,
+        accountNumber: account.accountNumber,
+      };
+  
+      const { signature, signed } = await window.keplr.signDirect(
+        chainId,
+        signerAddress,
+        {
+          bodyBytes: signDoc.bodyBytes,
+          authInfoBytes: signDoc.authInfoBytes,
+          chainId: signDoc.chainId,
+          accountNumber: signDoc.accountNumber,
+        }
+      );
+  
+      console.log('Signed document:', signed);
+      console.log('Signature:', signature);
+  
     } catch (error) {
       console.error('Error during transaction preparation:', error);
     }
